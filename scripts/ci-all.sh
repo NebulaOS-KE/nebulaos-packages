@@ -22,7 +22,8 @@ for TAG in $(gh release list --limit 100 --json tagName -q '.[].tagName' | grep 
 	rm -f "$WORK/$ID/nebulaos-sdk-$ID.tar.xz"
 	# Relocate, build and gate inside the build image; the SDK's own Python
 	# runs the gate (no assumption about the image's python3).
-	docker run --rm -v "$WORK/$ID:/w" -v "$HERE:/repo:ro" -v "$REQS:/reqs:ro" -w /w "$BUILD_IMAGE" sh -c "
+	# The image's entrypoint is ["sh", "-c"]: the script is its one argument.
+	docker run --rm -v "$WORK/$ID:/w" -v "$HERE:/repo:ro" -v "$REQS:/reqs:ro" -w /w "$BUILD_IMAGE" "
 		set -e
 		cd /w/nebulaos-sdk-$ID && ./relocate-sdk.sh >/dev/null
 		sh /repo/scripts/build-wheels.sh /w/nebulaos-sdk-$ID /w/wheels /reqs/*.txt
