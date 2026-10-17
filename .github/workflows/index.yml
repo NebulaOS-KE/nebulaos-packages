@@ -1,0 +1,63 @@
+name: index
+
+# Builds and publishes the NebulaOS package index (GitHub Pages, gh-pages).
+# Daily, so new releases of Moonraker/Klipper requirements appear without
+# anyone doing anything; manually; and on changes to the scripts.
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: index
+  cancel-in-progress: false
+
+env:
+  # The NebulaOS firmware build image (manifests/dependencies.conf
+  # BUILD_IMAGE_REPO/BUILD_IMAGE_DIGEST): the SDK's host tools were built in it.
+  BUILD_IMAGE: ghcr.io/coreflake1/nebulaos-build@sha256:a6ba57c69fa1ea630b037a1d1f55cf0c044a7f5a403bde9b155ea54bca1cceba
+
+jobs:
+  index:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+
+      - name: Requirements of the app updates a printer can install
+        run: sh scripts/collect-requirements.sh reqs && cat reqs/*.txt
+
+      - name: Current index
+        run: |
+          if git ls-remote --exit-code origin gh-pages >/dev/null; then
+            git fetch origin gh-pages --depth 1
+            git worktree add site origin/gh-pages
+            git -C site checkout -B gh-pages
+          else
+            git worktree add --detach site
+            git -C site checkout --orphan gh-pages
+            git -C site rm -rf --quiet . || true
+          fi
+          touch site/.nojekyll
+
+      - name: Build, check and add wheels for every SDK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: sh scripts/ci-all.sh reqs site
+
+      - name: Publish
+        run: |
+          cd site
+          git add -A
+          if git diff --cached --quiet; then echo "nothing new"; exit 0; fi
+          git -c user.name="nebulaos-index" -c user.email="actions@users.noreply.github.com" \
+            commit -q -m "index: $(date -u +%Y-%m-%dT%H:%MZ) ($GITHUB_SHA)"
+          git push origin gh-pages
