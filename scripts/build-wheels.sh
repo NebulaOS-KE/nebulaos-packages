@@ -58,7 +58,8 @@ for REQ in "$@"; do
 		[ -n "$SPEC" ] || continue
 		echo "== $NAME ($REQ): $SPEC"
 		# shellcheck disable=SC2086
-		"$CROSS_PIP" wheel --no-deps -w "$OUT" "$SPEC" $SETTINGS || echo "!! $NAME failed"
+		"$CROSS_PIP" wheel --no-deps -w "$OUT" "$SPEC" $SETTINGS \
+			|| { echo "!! $NAME failed"; echo "$SPEC (with packages.conf settings)" >> "$OUT/.failed"; }
 	done
 done
 

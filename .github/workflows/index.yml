@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 concurrency:
   group: index
@@ -27,7 +28,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 300
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Free disk space
         run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
@@ -51,7 +52,7 @@ jobs:
       - name: Build, check and add wheels for every SDK
         env:
           GH_TOKEN: ${{ github.token }}
-        run: sh scripts/ci-all.sh reqs site
+        run: sh scripts/ci-all.sh reqs site failures.txt
 
       - name: Publish
         run: |
@@ -61,3 +62,19 @@ jobs:
           git -c user.name="nebulaos-index" -c user.email="actions@users.noreply.github.com" \
             commit -q -m "index: $(date -u +%Y-%m-%dT%H:%MZ) ($GITHUB_SHA)"
           git push origin gh-pages
+
+      # Whatever built is published above; anything that did not build or was
+      # rejected by the ABI check makes the run red and is reported in one
+      # GitHub issue (opened, or commented on while it stays open).
+      - name: Report failures
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -s failures.txt ] || { echo "no failures"; exit 0; }
+          cat failures.txt
+          TITLE="Index build failures"
+          BODY=$(printf 'Run %s/%s/actions/runs/%s\n\n```\n%s\n```\n' "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" "$(head -c 60000 failures.txt)")
+          N=$(gh issue list --state open --search "in:title \"$TITLE\"" --json number -q '.[0].number')
+          if [ -n "$N" ]; then gh issue comment "$N" --body "$BODY"; else gh issue create --title "$TITLE" --body "$BODY"; fi
+          exit 1

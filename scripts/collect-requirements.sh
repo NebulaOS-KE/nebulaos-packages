@@ -27,6 +27,19 @@ for REF in "$TAG" origin/master; do
 	echo "== $NAME: $(grep -vc '^#' "$OUT/$NAME.txt") lines (pip<=${MAXPIP:-?})"
 done
 
-git clone -q --depth 1 https://github.com/Klipper3d/klipper.git "$WORK/klipper"
-cp "$WORK/klipper/scripts/klippy-requirements.txt" "$OUT/klipper-master.txt"
+KTAG=$(git ls-remote --tags --refs https://github.com/Klipper3d/klipper.git 'v*' \
+	| sed 's#.*refs/tags/##' | sort -V | tail -1)
+git clone -q --depth 1 https://github.com/Klipper3d/klipper.git "$WORK/klipper-master"
+cp "$WORK/klipper-master/scripts/klippy-requirements.txt" "$OUT/klipper-master.txt"
 echo "== klipper-master: $(grep -vc '^#' "$OUT/klipper-master.txt") lines"
+[ -z "$KTAG" ] || git clone -q --depth 1 --branch "$KTAG" https://github.com/Klipper3d/klipper.git "$WORK/klipper-$KTAG"
+
+# G72: Klipper's compiled helper (klippy/chelper -> c_helper.so) for the
+# versions a printer can update to: master and the latest release tag. One
+# directory per ref under <out>/chelper/.
+for REF in master $KTAG; do
+	D="$OUT/chelper/$REF"
+	mkdir -p "$D"
+	cp -a "$WORK/klipper-$REF/klippy/chelper/." "$D/"
+	echo "== klipper chelper $REF: $(ls "$D" | wc -l) files"
+done
