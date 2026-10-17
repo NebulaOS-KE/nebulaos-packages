@@ -30,6 +30,12 @@ one_abi() { # $1 = ABI id, in a subshell
 	tar -C "$D" -xJf "$D/nebulaos-sdk-$ID.tar.xz"
 	rm -f "$D/nebulaos-sdk-$ID.tar.xz"
 	SDK="$D/nebulaos-sdk-$ID"
+	# An SDK published before the chelper recipe travelled inside it: the
+	# firmware adds it to the release as nebulaos-chelper-tools-<id>.tar.gz.
+	if [ ! -d "$SDK/nebulaos" ] && gh release download "sdk-$ID" --dir "$D" \
+		--pattern "nebulaos-chelper-tools-$ID.tar.gz" 2>/dev/null; then
+		tar -C "$SDK" -xzf "$D/nebulaos-chelper-tools-$ID.tar.gz"
+	fi
 
 	# Klipper sources for c_helper.so: what collect-requirements.sh gathered
 	# (master) plus the Klipper this SDK's image ships ("pinned" - the
