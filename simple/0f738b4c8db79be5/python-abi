@@ -1,0 +1,13 @@
+scheme=1
+python=3.12
+soabi=cpython-312-mipsel-linux-gnu
+platform_tag=linux_mips
+glibc=2.41
+gcc=13.4.0
+arch=mips32r2
+abi=32
+fp32_mode=xx
+nan=legacy
+endian=little
+linkable=libz.so.1 libpng16.so.16 libfreetype.so.6 libffi.so.8 libssl.so.3 libcrypto.so.3 libsodium.so.26 libstdc++.so.6 libgcc_s.so.1
+id=0f738b4c8db79be5
