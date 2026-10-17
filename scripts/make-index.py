@@ -9,8 +9,9 @@ Layout (GitHub Pages, branch gh-pages):
   simple/<id>/<project>/index.html      links with #sha256=
   simple/<id>/<project>/<wheel>         the files
   simple/<id>/python-abi                the fingerprint the wheels were checked against
-  simple/<id>/chelper/<key>/c_helper.so Klipper's compiled helper (G72), by source key
-  simple/<id>/chelper/index.json        {key: {"sha256", "size", "refs"}}
+  chelper/<id>/<source hash>/c_helper.so Klipper's compiled helper (G72) - outside
+  chelper/<id>/index                     simple/, so pip never sees it; index lines
+  chelper/<id>/refs.json                 are "<source hash> <sha256> <size>"
 
 Append-only: a wheel already published is never replaced; one with the same
 name but different bytes is refused (reported, left out).
@@ -46,40 +47,47 @@ def write(path, title, links):
     os.replace(path + ".tmp", path)
 
 
-def add_chelper(root, src_dir):
-    """Append-only, like the wheels: a published helper is never replaced."""
-    cdir = os.path.join(root, "chelper")
+def add_chelper(site, abi_id, src_dir):
+    """Append-only, like the wheels: a published helper is never replaced.
+    Outside simple/ (pip's namespace): chelper/<id>/<source hash>/c_helper.so
+    and chelper/<id>/index, one "<source hash> <sha256> <size>" line each -
+    what the printer reads (etc/nebulaos-chelper-preflight.sh)."""
+    cdir = os.path.join(site, "chelper", abi_id)
     os.makedirs(cdir, exist_ok=True)
-    index_path = os.path.join(cdir, "index.json")
+    refs_path = os.path.join(cdir, "refs.json")
     try:
-        with open(index_path) as handle:
-            index = json.load(handle)
+        with open(refs_path) as handle:
+            refs = json.load(handle)
     except (OSError, ValueError):
-        index = {}
-    added = refused = 0
+        refs = {}
+    added = 0
     for key in sorted(os.listdir(src_dir)):
         lib = os.path.join(src_dir, key, "c_helper.so")
         if not (len(key) == 64 and os.path.isfile(lib)):
             continue
-        refs = sorted(set(open(os.path.join(src_dir, key, "refs")).read().split()))
         dest = os.path.join(cdir, key, "c_helper.so")
-        digest = sha256(lib)
+        new_refs = set(open(os.path.join(src_dir, key, "refs")).read().split())
+        refs[key] = sorted(set(refs.get(key, [])) | new_refs)
         if os.path.exists(dest):
-            if sha256(dest) != digest and index.get(key, {}).get("sha256") != digest:
+            if sha256(dest) != sha256(lib):
                 # the same sources rebuilt to other bytes: keep the published one
-                print("KEPT    chelper %s (already published)" % key[:16])
-            entry = index.setdefault(key, {"sha256": sha256(dest), "size": os.path.getsize(dest), "refs": []})
-            entry["refs"] = sorted(set(entry.get("refs", [])) | set(refs))
+                print("KEPT    chelper %s (already published, other bytes)" % key[:16])
             continue
         os.makedirs(os.path.dirname(dest), exist_ok=True)
         shutil.copy2(lib, dest)
-        index[key] = {"sha256": digest, "size": os.path.getsize(dest), "refs": refs}
         added += 1
-        print("ADDED   chelper %s (%s)" % (key[:16], ", ".join(refs)))
-    with open(index_path + ".tmp", "w") as handle:
-        json.dump(index, handle, indent=1, sort_keys=True)
-    os.replace(index_path + ".tmp", index_path)
-    return added, refused
+        print("ADDED   chelper %s (%s)" % (key[:16], ", ".join(sorted(new_refs))))
+    lines = []
+    for key in sorted(os.listdir(cdir)):
+        lib = os.path.join(cdir, key, "c_helper.so")
+        if len(key) == 64 and os.path.isfile(lib):
+            lines.append("%s %s %d\n" % (key, sha256(lib), os.path.getsize(lib)))
+    for path, data in ((os.path.join(cdir, "index"), "".join(lines)),
+                       (refs_path, json.dumps(refs, indent=1, sort_keys=True) + "\n")):
+        with open(path + ".tmp", "w") as handle:
+            handle.write(data)
+        os.replace(path + ".tmp", path)
+    return added
 
 
 def main():
@@ -106,12 +114,12 @@ def main():
         print("ADDED   %s" % name)
     for project in sorted(os.listdir(root)):
         pdir = os.path.join(root, project)
-        if not os.path.isdir(pdir) or project == "chelper":
+        if not os.path.isdir(pdir):
             continue
         files = sorted(f for f in os.listdir(pdir) if f.endswith(".whl"))
         write(os.path.join(pdir, "index.html"), "Links for " + project,
               [("%s#sha256=%s" % (f, sha256(os.path.join(pdir, f))), f) for f in files])
-    projects = sorted(p for p in os.listdir(root) if os.path.isdir(os.path.join(root, p)) and p != "chelper")
+    projects = sorted(p for p in os.listdir(root) if os.path.isdir(os.path.join(root, p)))
     write(os.path.join(root, "index.html"), "NebulaOS package index " + abi_id,
           [(p + "/", p) for p in projects])
     ids = sorted(d for d in os.listdir(os.path.join(site, "simple"))
@@ -119,9 +127,7 @@ def main():
     write(os.path.join(site, "simple", "index.html"), "NebulaOS package index",
           [(d + "/", d) for d in ids])
     if len(sys.argv) > 5 and os.path.isdir(sys.argv[5]):
-        a, r = add_chelper(root, sys.argv[5])
-        added += a
-        refused += r
+        added += add_chelper(site, abi_id, sys.argv[5])
     print("make-index: %d added, %d refused, %d projects for %s" % (added, refused, len(projects), abi_id))
     if refused:
         sys.exit(1)

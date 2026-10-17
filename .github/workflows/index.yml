@@ -28,13 +28,18 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 300
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
+
+      - name: Self-test (index scripts)
+        run: sh tests/run-tests.sh
 
       - name: Free disk space
         run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
 
       - name: Requirements of the app updates a printer can install
-        run: sh scripts/collect-requirements.sh reqs && cat reqs/*.txt
+        run: |
+          sh scripts/collect-requirements.sh reqs || { echo "collect-requirements.sh failed (no requirements, nothing built)" >> failures.txt; exit 1; }
+          cat reqs/*.txt
 
       - name: Current index
         run: |
@@ -55,7 +60,9 @@ jobs:
         run: sh scripts/ci-all.sh reqs site failures.txt
 
       - name: Publish
+        if: always()
         run: |
+          [ -d site ] || { echo "no site"; exit 0; }
           cd site
           git add -A
           if git diff --cached --quiet; then echo "nothing new"; exit 0; fi
@@ -71,6 +78,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          if [ ! -s failures.txt ] && [ "${{ job.status }}" != "success" ]; then
+            echo "a workflow step failed (${{ job.status }}) - see the run log" > failures.txt
+          fi
           [ -s failures.txt ] || { echo "no failures"; exit 0; }
           cat failures.txt
           TITLE="Index build failures"

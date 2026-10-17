@@ -27,19 +27,15 @@ for REF in "$TAG" origin/master; do
 	echo "== $NAME: $(grep -vc '^#' "$OUT/$NAME.txt") lines (pip<=${MAXPIP:-?})"
 done
 
-KTAG=$(git ls-remote --tags --refs https://github.com/Klipper3d/klipper.git 'v*' \
-	| sed 's#.*refs/tags/##' | sort -V | tail -1)
 git clone -q --depth 1 https://github.com/Klipper3d/klipper.git "$WORK/klipper-master"
 cp "$WORK/klipper-master/scripts/klippy-requirements.txt" "$OUT/klipper-master.txt"
 echo "== klipper-master: $(grep -vc '^#' "$OUT/klipper-master.txt") lines"
-[ -z "$KTAG" ] || git clone -q --depth 1 --branch "$KTAG" https://github.com/Klipper3d/klipper.git "$WORK/klipper-$KTAG"
 
-# G72: Klipper's compiled helper (klippy/chelper -> c_helper.so) for the
-# versions a printer can update to: master and the latest release tag. One
-# directory per ref under <out>/chelper/.
-for REF in master $KTAG; do
-	D="$OUT/chelper/$REF"
-	mkdir -p "$D"
-	cp -a "$WORK/klipper-$REF/klippy/chelper/." "$D/"
-	echo "== klipper chelper $REF: $(ls "$D" | wc -l) files"
-done
+# G72: Klipper's compiled helper (klippy/chelper -> c_helper.so) for what a
+# printer updates Klipper to: master (NebulaOS follows Klipper's dev channel).
+# Every run adds master's current sources (append-only), so the helpers
+# accumulate. ci-all.sh adds each SDK's own pinned Klipper.
+mkdir -p "$OUT/chelper/master/klippy"
+cp -a "$WORK/klipper-master/klippy/chelper" "$OUT/chelper/master/klippy/"
+git -C "$WORK/klipper-master" rev-parse HEAD > "$OUT/chelper/master/COMMIT"
+echo "== klipper chelper master $(cat "$OUT/chelper/master/COMMIT"): $(ls "$OUT/chelper/master/klippy/chelper" | wc -l) files"
