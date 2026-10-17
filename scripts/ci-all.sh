@@ -57,7 +57,7 @@ one_abi() { # $1 = ABI id, in a subshell
 		PATH=\$S/bin:\$PATH \$S/bin/python3 /repo/scripts/build-chelper.py \$S \$S/python-abi /w/chelper-src /w/chelper
 		chmod -R a+rwX /w"
 	python3 "$HERE/scripts/make-index.py" "$SITE" "$ID" "$SDK/python-abi" "$D/wheels" "$D/chelper" \
-		|| echo "ABI $ID: make-index refused a wheel (see the log)" >> "$FAILURES"
+		|| echo "ABI $ID: make-index failed (see the log)" >> "$FAILURES"
 	if [ -f "$D/chelper/.failed" ]; then
 		sed "s/^/ABI $ID: /" "$D/chelper/.failed" >> "$FAILURES"
 	fi

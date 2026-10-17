@@ -39,6 +39,12 @@ python3 "$HERE/scripts/make-index.py" "$WORK/site" abc "$WORK/abi" "$WORK/wheels
 [ "$(wc -l < "$WORK/site/chelper/abc/index")" -eq 2 ] && pass "make-index: a run without helpers leaves the chelper tree alone" \
 	|| fail "make-index: chelper tree changed by a wheels-only run"
 
+printf 'rebuilt' > "$WORK/wheels/foo-1.0-py3-none-any.whl"
+python3 "$HERE/scripts/make-index.py" "$WORK/site" abc "$WORK/abi" "$WORK/wheels" > /dev/null
+rc=$?
+[ "$rc" -eq 0 ] && [ "$(cat "$WORK/site/simple/abc/foo/foo-1.0-py3-none-any.whl")" = wheel ] \
+	&& pass "make-index: a rebuilt wheel with other bytes keeps the published one, no failure" || fail "make-index: rebuilt wheel (rc=$rc)"
+
 # --- ci-all: per-ABI isolation ------------------------------------------
 mkdir -p "$WORK/bin" "$WORK/reqs" "$WORK/site2"
 cat > "$WORK/bin/gh" <<EOF

@@ -13,8 +13,10 @@ Layout (GitHub Pages, branch gh-pages):
   chelper/<id>/index                     simple/, so pip never sees it; index lines
   chelper/<id>/refs.json                 are "<source hash> <sha256> <size>"
 
-Append-only: a wheel already published is never replaced; one with the same
-name but different bytes is refused (reported, left out).
+Append-only: a wheel already published is never replaced. A rebuild of the
+same version gives other bytes (wheel builds are not reproducible); the
+published file is kept and the rebuild dropped - that is normal, not a
+failure.
 """
 import hashlib
 import html
@@ -95,7 +97,7 @@ def main():
     root = os.path.join(site, "simple", abi_id)
     os.makedirs(root, exist_ok=True)
     shutil.copy(abi_file, os.path.join(root, "python-abi"))
-    added = refused = 0
+    added = kept = 0
     for name in sorted(os.listdir(wheels)):
         if not name.endswith(".whl"):
             continue
@@ -106,8 +108,7 @@ def main():
         src = os.path.join(wheels, name)
         if os.path.exists(dest):
             if sha256(dest) != sha256(src):
-                refused += 1
-                print("REFUSED %s: already published with different bytes" % name)
+                kept += 1
             continue
         shutil.copy2(src, dest)
         added += 1
@@ -128,9 +129,8 @@ def main():
           [(d + "/", d) for d in ids])
     if len(sys.argv) > 5 and os.path.isdir(sys.argv[5]):
         added += add_chelper(site, abi_id, sys.argv[5])
-    print("make-index: %d added, %d refused, %d projects for %s" % (added, refused, len(projects), abi_id))
-    if refused:
-        sys.exit(1)
+    print("make-index: %d added, %d already published (kept), %d projects for %s"
+          % (added, kept, len(projects), abi_id))
 
 
 if __name__ == "__main__":
