@@ -1,7 +1,7 @@
 # NebulaOS package index
 
 Ready-made Python packages (wheels) for printers running
-[NebulaOS](https://github.com/coreflake1/NebulaOS), so Moonraker and Klipper
+[NebulaOS](https://github.com/NebulaOS-KE/NebulaOS), so Moonraker and Klipper
 can update themselves - including their compiled dependencies - without a
 compiler on the printer.
 

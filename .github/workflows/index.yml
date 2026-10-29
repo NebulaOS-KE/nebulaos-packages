@@ -21,7 +21,7 @@ concurrency:
 env:
   # The NebulaOS firmware build image (manifests/dependencies.conf
   # BUILD_IMAGE_REPO/BUILD_IMAGE_DIGEST): the SDK's host tools were built in it.
-  BUILD_IMAGE: ghcr.io/coreflake1/nebulaos-build@sha256:a6ba57c69fa1ea630b037a1d1f55cf0c044a7f5a403bde9b155ea54bca1cceba
+  BUILD_IMAGE: ghcr.io/nebulaos-ke/nebulaos-build@sha256:a6ba57c69fa1ea630b037a1d1f55cf0c044a7f5a403bde9b155ea54bca1cceba
 
 jobs:
   index:
