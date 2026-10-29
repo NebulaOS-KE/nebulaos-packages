@@ -1,5 +1,7 @@
 # NebulaOS package index
 
+> Part of [NebulaOS](https://github.com/NebulaOS-KE/NebulaOS): open firmware for the Creality Ender-3 V3 KE. The project map, releases and downloads are there.
+
 Ready-made Python packages (wheels) for printers running
 [NebulaOS](https://github.com/NebulaOS-KE/NebulaOS), so Moonraker and Klipper
 can update themselves - including their compiled dependencies - without a
