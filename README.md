@@ -7,6 +7,13 @@ Ready-made Python packages (wheels) for printers running
 can update themselves - including their compiled dependencies - without a
 compiler on the printer.
 
+## Developer documentation
+
+The developer reference is this repository's **[wiki](https://github.com/NebulaOS-KE/nebulaos-packages/wiki)**: the ABI fingerprint and the checks
+a wheel tag cannot make, the pipeline, the four invariants, and the image end of the contract.
+The pages are kept as Markdown in the top-level [`wiki/`](wiki) directory and published from
+there.
+
 ## How it works
 
 - Every NebulaOS image carries a **Python ABI fingerprint**
